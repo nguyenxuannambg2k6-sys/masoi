@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>WolfMessenger V1 - Pro Edition</title>
+    <title>WolfMessenger V1 - AI & QR Edition</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
     <style>
@@ -21,12 +21,14 @@
         .msg.sent { background: var(--primary); align-self: flex-end; }
         .msg.received { background: #334155; align-self: flex-start; }
         .msg.wolf { border: 1px solid var(--wolf); color: #fca5a5; }
+        .msg.ai { border-left: 4px solid var(--gold); background: #1e1b4b; font-style: italic; }
         .lobby-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 100; }
         .login-box { background: var(--card); padding: 40px; border-radius: 25px; width: 350px; text-align: center; }
         input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; box-sizing: border-box; }
         button { padding: 10px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
         .btn-vote { background: var(--gold); color: black; font-size: 11px; padding: 4px 8px; margin-left: auto; }
         .vote-count { background: var(--wolf); color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 5px; }
+        #qr-container { background: white; padding: 10px; margin-bottom: 10px; border-radius: 10px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -42,7 +44,16 @@
 
 <div id="game-ui" class="app-container hidden">
     <div class="sidebar">
-        <div style="padding: 15px; font-weight: bold; background: #1e293b;">Đoạn chat</div>
+        <div id="admin-panel" class="hidden" style="padding: 15px; background: #1e1b4b; border-bottom: 1px solid var(--gold);">
+            <div id="qr-container">
+                <img id="qr-code" style="width: 150px; height: 150px;">
+                <div style="color: black; font-size: 10px; font-weight: bold;">QUÉT ĐỂ THAM GIA</div>
+            </div>
+            <button onclick="startGame()" style="background: #059669; color: white; width: 100%; margin-bottom: 5px;">CHIA VAI & BẮT ĐẦU</button>
+            <button onclick="activateAI()" id="ai-toggle" style="background: var(--gold); color: black; width: 100%;">KÍCH HOẠT QUẢN TRÒ AI</button>
+        </div>
+
+        <div style="padding: 15px; font-weight: bold; background: #111827;">Kênh trò chuyện</div>
         <div class="chat-item" onclick="changeChat('village', null)">
             <div class="avatar" style="background: var(--primary);"></div>
             <div><b>Làng Ma Sói</b></div>
@@ -62,11 +73,6 @@
         
         <div style="padding: 10px; font-size: 12px; color: #94a3b8; background: #0f172a;">NGƯỜI CHƠI (Chat riêng/Vote)</div>
         <div id="player-list-area"></div>
-
-        <div id="admin-panel" class="hidden" style="padding: 15px; background: #1e1b4b; border-top: 1px solid var(--gold);">
-            <button onclick="startGame()" style="background: #059669; color: white; width: 100%; margin-bottom: 5px;">CHIA 50 VAI & BẮT ĐẦU</button>
-            <button onclick="toggleTime()" style="background: var(--primary); color: white; width: 100%;">CHUYỂN NGÀY/ĐÊM</button>
-        </div>
     </div>
 
     <div class="main-chat">
@@ -75,11 +81,12 @@
                 <b id="chat-title">Làng Ma Sói</b><br>
                 <small id="user-info">Đang kết nối...</small>
             </div>
+            <button onclick="toggleTime()" id="time-btn" class="hidden" style="background: var(--primary); color: white; padding: 5px 10px;">☀️ Chuyển Đêm</button>
             <div id="phase-badge" style="background: var(--gold); color: black; padding: 5px 12px; border-radius: 15px; font-weight: bold; font-size: 13px;">☀️ BAN NGÀY</div>
         </div>
         <div class="messages" id="msg-list"></div>
         <div style="padding: 15px; background: #1e293b; display: flex; gap: 10px;">
-            <input type="text" id="chat-input" placeholder="Nhập tin nhắn..." style="margin: 0; flex-grow: 1;">
+            <input type="text" id="chat-input" placeholder="Nhập tin nhắn hoặc /xoafirebase..." style="margin: 0; flex-grow: 1;">
             <button onclick="sendMsg()" style="width: 70px; background: var(--primary); color: white;">Gửi</button>
         </div>
     </div>
@@ -108,77 +115,106 @@
     const db = firebase.database();
 
     let myUser = { id: 0, name: "", role: "Dân Làng", room: "" };
-    let currentMode = "village"; 
-    let targetUser = null; 
-    let isNight = false;
+    let currentMode = "village"; let targetUser = null; let isNight = false; let isAIActive = false;
+
+    // Tự động điền mã phòng từ URL nếu quét QR
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.has('room')) document.getElementById('roomCode').value = urlParams.get('room');
+    };
 
     function joinGame() {
         const name = document.getElementById('userName').value.trim();
         const code = document.getElementById('roomCode').value.trim().toUpperCase();
         if(!name || !code) return alert("Nhập đủ tên và phòng!");
-
         myUser.name = name; myUser.room = code;
         const roomRef = db.ref(`rooms/${code}/players`);
-        
         roomRef.once('value', (snapshot) => {
             myUser.id = snapshot.numChildren() + 1;
             if(myUser.id === 1) myUser.isAdmin = true;
-
-            const myRef = roomRef.child(myUser.id);
-            myRef.set(myUser);
-
-            // Tự động xóa dữ liệu cá nhân khi ngắt kết nối
-            myRef.onDisconnect().remove();
-
+            roomRef.child(myUser.id).set(myUser);
+            roomRef.child(myUser.id).onDisconnect().remove();
             setupGameUI();
         });
+    }
+
+    function generateQR() {
+        const url = window.location.origin + window.location.pathname + "?room=" + myUser.room;
+        document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
     }
 
     function setupGameUI() {
         document.getElementById('lobby').classList.add('hidden');
         document.getElementById('game-ui').classList.remove('hidden');
-        if(myUser.isAdmin) document.getElementById('admin-panel').classList.remove('hidden');
+        if(myUser.isAdmin) {
+            document.getElementById('admin-panel').classList.remove('hidden');
+            document.getElementById('time-btn').classList.remove('hidden');
+            generateQR();
+        }
         
-        // Lắng nghe lệnh xóa phòng hoặc phòng trống
-        db.ref(`rooms/${myUser.room}`).on('value', (snapshot) => {
-            if (!snapshot.exists() && myUser.room !== "") {
-                location.reload();
-            }
-        });
-
+        db.ref(`rooms/${myUser.room}`).on('value', (snapshot) => { if (!snapshot.exists() && myUser.room !== "") location.reload(); });
         db.ref(`rooms/${myUser.room}/players/${myUser.id}/role`).on('value', (s) => {
             myUser.role = s.val() || "Dân Làng";
-            document.getElementById('user-info').innerText = `ID: ${myUser.id} | ${myUser.name} | Vai: ${myUser.role}`;
+            document.getElementById('user-info').innerText = `ID: ${myUser.id} | Vai: ${myUser.role}`;
             if(myUser.role.includes("Sói")) document.getElementById('side-wolf').classList.remove('hidden');
             if(myUser.role !== "Dân Làng" && !myUser.role.includes("Sói")) document.getElementById('side-skill').classList.remove('hidden');
         });
-
         db.ref(`rooms/${myUser.room}/isNight`).on('value', (s) => {
             isNight = s.val() || false;
             document.getElementById('phase-badge').innerText = isNight ? "🌙 BAN ĐÊM" : "☀️ BAN NGÀY";
             document.getElementById('phase-badge').style.background = isNight ? "#4a148c" : "#facc15";
+            if(isNight && isAIActive) runAINightLogic();
         });
-
         db.ref(`rooms/${myUser.room}/messages`).on('child_added', (s) => renderMessage(s.val()));
-        db.ref(`rooms/${myUser.room}/players`).on('value', (s) => {
+        db.ref(`rooms/${myUser.room}/players`).on('value', (s) => updatePlayerList(s.val()));
+        db.ref(`rooms/${myUser.room}/votes`).on('value', (s) => {
+            const v = s.val(); updateVoteUI(v);
+            if(isAIActive && !isNight) checkAIVote(v);
+        });
+        db.ref(`rooms/${myUser.room}/aiActive`).on('value', (s) => {
+            isAIActive = s.val() || false;
+            if(isAIActive) document.getElementById('ai-toggle').innerText = "🤖 AI ĐANG ĐIỀU HÀNH";
+        });
+    }
+
+    function activateAI() {
+        if(!myUser.isAdmin) return;
+        isAIActive = true;
+        db.ref(`rooms/${myUser.room}/aiActive`).set(true);
+        aiAnnounce("Hệ thống Quản Trò AI đã được kích hoạt. ID 1 giờ đây có thể tham gia ẩn vai!");
+    }
+
+    function aiAnnounce(text) {
+        db.ref(`rooms/${myUser.room}/messages`).push({ sender: "🤖 QUẢN TRÒ AI", text: text, mode: "village", isAI: true });
+    }
+
+    function checkAIVote(votes) {
+        if(!votes) return;
+        db.ref(`rooms/${myUser.room}/players`).once('value', (s) => {
             const players = s.val();
-            updatePlayerList(players);
-            // Nếu là người cuối cùng rời đi, dọn dẹp toàn bộ phòng
-            if (myUser.isAdmin && (!players || Object.keys(players).length === 0)) {
-                 db.ref(`rooms/${myUser.room}`).onDisconnect().remove();
+            const totalAlive = Object.keys(players).length;
+            const counts = {};
+            Object.values(votes).forEach(vid => counts[vid] = (counts[vid] || 0) + 1);
+            for (let targetId in counts) {
+                if (counts[targetId] > totalAlive / 2) {
+                    aiAnnounce(`⚖️ Dựa trên biểu quyết, ID ${targetId} đã bị dân làng treo cổ!`);
+                    db.ref(`rooms/${myUser.room}/votes`).remove();
+                    break;
+                }
             }
         });
-        db.ref(`rooms/${myUser.room}/votes`).on('value', (s) => updateVoteUI(s.val()));
+    }
+
+    function runAINightLogic() {
+        aiAnnounce("🌙 Đêm đã xuống. Mọi người nhắm mắt lại. Sói hãy thức dậy bàn bạc...");
     }
 
     function updatePlayerList(playersData) {
-        const area = document.getElementById('player-list-area');
-        area.innerHTML = "";
+        const area = document.getElementById('player-list-area'); area.innerHTML = "";
         if(!playersData) return;
         Object.values(playersData).forEach(p => {
             if(p.id === myUser.id) return;
-            const div = document.createElement('div');
-            div.className = 'chat-item';
+            const div = document.createElement('div'); div.className = 'chat-item';
             div.innerHTML = `<div class="avatar"></div><div style="flex-grow:1" onclick="changeChat('private', ${JSON.stringify(p).replace(/"/g, '&quot;')})"><b>${p.name}</b><br><small>ID: ${p.id}</small></div>
                              <button class="btn-vote" onclick="castVote(${p.id})">VOTE</button><span class="vote-count" id="vc-${p.id}">0</span>`;
             area.appendChild(div);
@@ -186,23 +222,22 @@
     }
 
     function castVote(targetId) {
-        if(isNight) return alert("Ban đêm không thể biểu quyết!");
+        if(isNight) return alert("Ban đêm không thể vote treo cổ!");
         db.ref(`rooms/${myUser.room}/votes/${myUser.id}`).set(targetId);
     }
 
     function updateVoteUI(votes) {
-        const counts = {};
-        if(votes) Object.values(votes).forEach(vid => counts[vid] = (counts[vid] || 0) + 1);
+        const counts = {}; if(votes) Object.values(votes).forEach(vid => counts[vid] = (counts[vid] || 0) + 1);
         document.querySelectorAll('.vote-count').forEach(el => el.innerText = counts[el.id.split('-')[1]] || 0);
     }
 
     function startGame() {
         db.ref(`rooms/${myUser.room}/players`).once('value', (s) => {
             const keys = Object.keys(s.val());
-            let shuffledRoles = [...rolesPool].sort(() => Math.random() - 0.5);
-            keys.forEach((key, i) => db.ref(`rooms/${myUser.room}/players/${key}/role`).set(shuffledRoles[i]));
+            let shuffled = [...rolesPool].sort(() => Math.random() - 0.5);
+            keys.forEach((key, i) => db.ref(`rooms/${myUser.room}/players/${key}/role`).set(shuffled[i]));
             db.ref(`rooms/${myUser.room}/votes`).remove();
-            alert("Đã chia xong vai cho " + keys.length + " người!");
+            aiAnnounce("⚙️ Trò chơi bắt đầu! Chức năng đã được chia bí mật.");
         });
     }
 
@@ -217,19 +252,13 @@
     }
 
     function sendMsg() {
-        const text = document.getElementById('chat-input').value.trim();
-        if(!text) return;
-
+        const text = document.getElementById('chat-input').value.trim(); if(!text) return;
         if (currentMode === 'admin' && text.toLowerCase() === '/xoafirebase') {
-            if (confirm("Xóa sạch dữ liệu phòng?")) {
-                db.ref(`rooms/${myUser.room}`).remove().then(() => location.reload());
-                return;
-            }
+            if (confirm("Xóa phòng?")) db.ref(`rooms/${myUser.room}`).remove().then(() => location.reload());
+            return;
         }
-
         if(currentMode === 'wolf' && !myUser.role.includes("Sói") && !myUser.isAdmin) return alert("Bạn không phải Sói!");
         if(currentMode === 'village' && isNight && !myUser.isAdmin) return alert("Đêm phải im lặng!");
-
         db.ref(`rooms/${myUser.room}/messages`).push({
             sender: myUser.name, senderId: myUser.id, text: text, mode: currentMode,
             receiverId: targetUser ? targetUser.id : null
@@ -244,13 +273,11 @@
             if(!isRel && !myUser.isAdmin) return;
         }
         if(m.mode !== currentMode) return;
-
         const list = document.getElementById('msg-list');
         const div = document.createElement('div');
-        div.className = `msg ${m.senderId === myUser.id ? 'sent' : 'received'} ${m.mode === 'wolf' ? 'wolf' : ''}`;
+        div.className = `msg ${m.senderId === myUser.id ? 'sent' : 'received'} ${m.mode === 'wolf' ? 'wolf' : ''} ${m.isAI ? 'ai' : ''}`;
         div.innerHTML = `<b>${m.sender}:</b> ${m.text}`;
-        list.appendChild(div);
-        list.scrollTop = list.scrollHeight;
+        list.appendChild(div); list.scrollTop = list.scrollHeight;
     }
 </script>
 </body>
