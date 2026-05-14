@@ -185,25 +185,60 @@
         document.getElementById('msg-list').innerHTML = ""; // Reset để load lại tin nhắn theo bộ lọc
     }
 
-    function sendMsg() {
-        const text = document.getElementById('chat-input').value.trim();
-        if(!text) return;
-        db.ref(`rooms/${myUser.room}/messages`).push({
-            sender: myUser.name,
-            text: text,
-            mode: currentMode
-        });
-        document.getElementById('chat-input').value = "";
+   function sendMsg() {
+    const text = document.getElementById('chat-input').value.trim();
+    if(!text) return;
+
+    // 1. Chặn Dân Làng nhắn vào kênh Sói
+    if(currentMode === 'wolf' && myUser.role !== 'Ma Sói' && !myUser.isAdmin) {
+        alert("Chỉ Ma Sói mới được dùng kênh chat này!");
+        return;
     }
 
-    function renderMessage(m) {
-        const list = document.getElementById('msg-list');
-        const div = document.createElement('div');
-        div.className = `msg ${m.sender === myUser.name ? 'sent' : 'received'} ${m.mode === 'wolf' ? 'wolf' : ''}`;
-        div.innerHTML = `<b>${m.sender}</b>${m.text}`;
-        list.appendChild(div);
-        list.scrollTop = list.scrollHeight;
+    // 2. Chặn người không có chức năng nhắn vào kênh Skill
+    if(currentMode === 'skill' && (myUser.role === 'Dân Làng' || myUser.role === 'Ma Sói') && !myUser.isAdmin) {
+        alert("Kênh này dành riêng cho các vai diễn có chức năng đặc biệt!");
+        return;
     }
+
+    // 3. (Tùy chọn) Chặn nhắn vào kênh Làng khi đang là Ban Đêm
+    if(currentMode === 'village' && isNight && !myUser.isAdmin) {
+        alert("Trời đang tối, mọi người phải giữ im lặng!");
+        return;
+    }
+
+    // Nếu vượt qua các lớp bảo vệ trên, tin nhắn mới được gửi đi
+    db.ref(`rooms/${myUser.room}/messages`).push({
+        sender: myUser.name,
+        text: text,
+        mode: currentMode
+    });
+
+    document.getElementById('chat-input').value = "";
+}
+
+    function renderMessage(m) {
+    // 1. Chặn hiển thị tin nhắn Sói cho phe Dân (trừ Quản trò)
+    if (m.mode === 'wolf' && myUser.role !== 'Ma Sói' && !myUser.isAdmin) return;
+    
+    // 2. Chặn hiển thị tin nhắn Kênh Chức Năng cho Dân thường (trừ Quản trò)
+    if (m.mode === 'skill' && myUser.role === 'Dân Làng' && !myUser.isAdmin) return;
+    
+    // 3. Chỉ hiển thị tin nhắn thuộc kênh người chơi đang mở (tránh loạn tin giữa các tab)
+    if (m.mode !== currentMode) return;
+
+    const list = document.getElementById('msg-list');
+    const div = document.createElement('div');
+    
+    // Phân biệt tin nhắn gửi đi/nhận về và đánh dấu tin nhắn Sói
+    div.className = `msg ${m.sender === myUser.name ? 'sent' : 'received'} ${m.mode === 'wolf' ? 'wolf' : ''}`;
+    
+    div.innerHTML = `<b>${m.sender}</b>${m.text}`;
+    list.appendChild(div);
+    
+    // Tự động cuộn xuống dưới cùng để xem tin nhắn mới nhất
+    list.scrollTop = list.scrollHeight;
+}
 </script>
 </body>
 </html>
