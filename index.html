@@ -55,8 +55,12 @@
             <div class="avatar" style="background: var(--gold);"></div>
             <div><b>Kênh Chức Năng</b></div>
         </div>
+        <div class="chat-item" onclick="changeChat('admin', null)">
+            <div class="avatar" style="background: #64748b;"></div>
+            <div><b>Inbox Quản Trò</b></div>
+        </div>
         
-        <div style="padding: 10px; font-size: 12px; color: #94a3b8; background: #0f172a;">NGƯỜI CHƠI (Bấm để Chat riêng/Vote)</div>
+        <div style="padding: 10px; font-size: 12px; color: #94a3b8; background: #0f172a;">NGƯỜI CHƠI (Chat riêng/Vote)</div>
         <div id="player-list-area"></div>
 
         <div id="admin-panel" class="hidden" style="padding: 15px; background: #1e1b4b; border-top: 1px solid var(--gold);">
@@ -128,6 +132,14 @@
         document.getElementById('game-ui').classList.remove('hidden');
         if(myUser.isAdmin) document.getElementById('admin-panel').classList.remove('hidden');
         
+        // Lắng nghe lệnh xóa phòng từ hệ thống
+        db.ref(`rooms/${myUser.room}`).on('value', (snapshot) => {
+            if (!snapshot.exists() && myUser.room !== "") {
+                alert("Dữ liệu phòng đã bị xóa bởi lệnh /xoafirebase!");
+                location.reload();
+            }
+        });
+
         db.ref(`rooms/${myUser.room}/players/${myUser.id}/role`).on('value', (s) => {
             myUser.role = s.val() || "Dân Làng";
             document.getElementById('user-info').innerText = `ID: ${myUser.id} | ${myUser.name} | Vai: ${myUser.role}`;
@@ -149,11 +161,12 @@
     function updatePlayerList(playersData) {
         const area = document.getElementById('player-list-area');
         area.innerHTML = "";
+        if(!playersData) return;
         Object.values(playersData).forEach(p => {
             if(p.id === myUser.id) return;
             const div = document.createElement('div');
             div.className = 'chat-item';
-            div.innerHTML = `<div class="avatar"></div><div onclick="changeChat('private', ${JSON.stringify(p).replace(/"/g, '&quot;')})"><b>${p.name}</b><br><small>Nhấn để Chat riêng</small></div>
+            div.innerHTML = `<div class="avatar"></div><div style="flex-grow:1" onclick="changeChat('private', ${JSON.stringify(p).replace(/"/g, '&quot;')})"><b>${p.name}</b><br><small>ID: ${p.id}</small></div>
                              <button class="btn-vote" onclick="castVote(${p.id})">VOTE</button><span class="vote-count" id="vc-${p.id}">0</span>`;
             area.appendChild(div);
         });
@@ -176,7 +189,7 @@
             let shuffledRoles = [...rolesPool].sort(() => Math.random() - 0.5);
             keys.forEach((key, i) => db.ref(`rooms/${myUser.room}/players/${key}/role`).set(shuffledRoles[i]));
             db.ref(`rooms/${myUser.room}/votes`).remove();
-            alert("Đã chia vai xong!");
+            alert("Đã chia xong vai cho " + keys.length + " người!");
         });
     }
 
@@ -184,7 +197,8 @@
 
     function changeChat(mode, user) {
         currentMode = mode; targetUser = user;
-        document.getElementById('chat-title').innerText = user ? "Chat riêng: " + user.name : (mode==='village'?"Làng Ma Sói":(mode==='wolf'?"Hội Đồng Sói":"Kênh Chức Năng"));
+        const titles = { village: "Làng Ma Sói", wolf: "Hội Đồng Sói", skill: "Kênh Chức Năng", admin: "Inbox Quản Trò" };
+        document.getElementById('chat-title').innerText = user ? "Chat riêng: " + user.name : titles[mode];
         document.getElementById('msg-list').innerHTML = "";
         db.ref(`rooms/${myUser.room}/messages`).once('value', (s) => { if(s.val()) Object.values(s.val()).forEach(m => renderMessage(m)); });
     }
@@ -192,6 +206,16 @@
     function sendMsg() {
         const text = document.getElementById('chat-input').value.trim();
         if(!text) return;
+
+        // --- CÂU LỆNH GIẢI TÁN PHÒNG ---
+        if (currentMode === 'admin' && text.toLowerCase() === '/xoafirebase') {
+            if (confirm("Hành động này sẽ xóa sạch dữ liệu phòng trên Firebase. Tiếp tục?")) {
+                db.ref(`rooms/${myUser.room}`).remove()
+                    .then(() => { alert("Đã xóa Firebase thành công!"); location.reload(); });
+                return;
+            }
+        }
+
         if(currentMode === 'wolf' && !myUser.role.includes("Sói") && !myUser.isAdmin) return alert("Bạn không phải Sói!");
         if(currentMode === 'village' && isNight && !myUser.isAdmin) return alert("Đêm phải im lặng!");
 
