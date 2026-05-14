@@ -119,10 +119,17 @@
 
         myUser.name = name; myUser.room = code;
         const roomRef = db.ref(`rooms/${code}/players`);
+        
         roomRef.once('value', (snapshot) => {
             myUser.id = snapshot.numChildren() + 1;
             if(myUser.id === 1) myUser.isAdmin = true;
-            roomRef.child(myUser.id).set(myUser);
+
+            const myRef = roomRef.child(myUser.id);
+            myRef.set(myUser);
+
+            // Tự động xóa dữ liệu cá nhân khi ngắt kết nối
+            myRef.onDisconnect().remove();
+
             setupGameUI();
         });
     }
@@ -132,10 +139,9 @@
         document.getElementById('game-ui').classList.remove('hidden');
         if(myUser.isAdmin) document.getElementById('admin-panel').classList.remove('hidden');
         
-        // Lắng nghe lệnh xóa phòng từ hệ thống
+        // Lắng nghe lệnh xóa phòng hoặc phòng trống
         db.ref(`rooms/${myUser.room}`).on('value', (snapshot) => {
             if (!snapshot.exists() && myUser.room !== "") {
-                alert("Dữ liệu phòng đã bị xóa bởi lệnh /xoafirebase!");
                 location.reload();
             }
         });
@@ -154,7 +160,14 @@
         });
 
         db.ref(`rooms/${myUser.room}/messages`).on('child_added', (s) => renderMessage(s.val()));
-        db.ref(`rooms/${myUser.room}/players`).on('value', (s) => updatePlayerList(s.val()));
+        db.ref(`rooms/${myUser.room}/players`).on('value', (s) => {
+            const players = s.val();
+            updatePlayerList(players);
+            // Nếu là người cuối cùng rời đi, dọn dẹp toàn bộ phòng
+            if (myUser.isAdmin && (!players || Object.keys(players).length === 0)) {
+                 db.ref(`rooms/${myUser.room}`).onDisconnect().remove();
+            }
+        });
         db.ref(`rooms/${myUser.room}/votes`).on('value', (s) => updateVoteUI(s.val()));
     }
 
@@ -207,11 +220,9 @@
         const text = document.getElementById('chat-input').value.trim();
         if(!text) return;
 
-        // --- CÂU LỆNH GIẢI TÁN PHÒNG ---
         if (currentMode === 'admin' && text.toLowerCase() === '/xoafirebase') {
-            if (confirm("Hành động này sẽ xóa sạch dữ liệu phòng trên Firebase. Tiếp tục?")) {
-                db.ref(`rooms/${myUser.room}`).remove()
-                    .then(() => { alert("Đã xóa Firebase thành công!"); location.reload(); });
+            if (confirm("Xóa sạch dữ liệu phòng?")) {
+                db.ref(`rooms/${myUser.room}`).remove().then(() => location.reload());
                 return;
             }
         }
