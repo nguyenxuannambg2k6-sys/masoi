@@ -3,266 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WolfMessenger V1 - Multi-Device</title>
+    <title>WolfMessenger V5 - Final Fix</title>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --primary: #2563eb; --wolf: #ef4444; --gold: #facc15; --text: white; }
-        * { box-sizing: border-box; }
-        body { margin:0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+        :root { --bg: #0f172a; --card: #1e293b; --primary: #2563eb; --wolf: #ef4444; --gold: #facc15; }
+        body { margin:0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; height: 100vh; overflow: hidden; }
         .hidden { display: none !important; }
-
-        /* Container & Layout */
-        .app-container { display: flex; height: 100vh; position: relative; }
-        
-        /* Sidebar */
-        .sidebar { 
-            width: 300px; background: #111827; border-right: 1px solid #334155; 
-            display: flex; flex-direction: column; transition: all 0.3s ease;
-            z-index: 50;
-        }
-
-        /* Main Chat Area */
-        .main-chat { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg); position: relative; }
-        .chat-header { 
-            padding: 10px 15px; background: #1e293b; border-bottom: 1px solid #334155; 
-            display: flex; justify-content: space-between; align-items: center; 
-        }
-
-        /* Responsive cho Điện thoại */
-        @media (max-width: 768px) {
-            .sidebar { 
-                position: absolute; left: -300px; top: 0; bottom: 0; width: 260px;
-            }
-            .sidebar.active { left: 0; }
-            .mobile-overlay { 
-                display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 40; 
-            }
-            .mobile-overlay.active { display: block; }
-            .btn-menu { display: block !important; }
-        }
-
-        /* Chat UI Elements */
-        .messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
-        .msg.sent { background: var(--primary); align-self: flex-end; border-bottom-right-radius: 4px; }
-        .msg.received { background: #334155; align-self: flex-start; border-bottom-left-radius: 4px; }
-        .msg.system { background: #1e1b4b; border: 1px solid var(--gold); color: var(--gold); align-self: center; text-align: center; font-style: italic; }
-        
-        /* Sidebar Items */
-        .chat-item { padding: 12px 15px; display: flex; align-items: center; gap: 10px; cursor: pointer; border-bottom: 1px solid #1e293b; }
-        .avatar { width: 35px; height: 35px; border-radius: 50%; background: #475569; flex-shrink: 0; }
-        .vote-count { background: var(--wolf); padding: 2px 6px; border-radius: 10px; font-size: 10px; }
-        
-        /* Controls */
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 300px; background: #0b1120; border-right: 1px solid #1e293b; display: flex; flex-direction: column; }
+        .main-chat { flex-grow: 1; display: flex; flex-direction: column; background: #0f172a; }
+        .messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .msg { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 14px; }
+        .msg.sent { background: var(--primary); align-self: flex-end; }
+        .msg.received { background: #1e293b; align-self: flex-start; }
+        .msg.system { border-left: 4px solid var(--gold); background: rgba(250,204,21,0.1); width: 100%; color: var(--gold); }
+        .player-card { padding: 10px; border-bottom: 1px solid #1e293b; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .player-card.dead { opacity: 0.3; text-decoration: line-through; }
         .input-area { padding: 15px; background: #1e293b; display: flex; gap: 10px; }
-        input { flex-grow: 1; padding: 12px; border-radius: 20px; border: 1px solid #334155; background: #0f172a; color: white; outline: none; }
-        button { padding: 8px 16px; border-radius: 20px; border: none; font-weight: bold; cursor: pointer; background: var(--primary); color: white; }
-        
-        /* Lobby */
-        .lobby-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
-        .login-box { background: var(--card); padding: 30px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; }
+        input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0b1120; color: white; }
+        button { padding: 10px 20px; border-radius: 8px; border: none; font-weight: bold; background: var(--primary); color: white; cursor: pointer; }
+        .screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .box { background: var(--card); padding: 30px; border-radius: 20px; width: 340px; text-align: center; }
     </style>
 </head>
 <body>
 
-<div id="lobby" class="lobby-screen">
-    <div class="login-box">
-        <h2 style="color: var(--gold)">🐺 WolfMessenger V1</h2>
-        <input type="text" id="userName" placeholder="Tên của bạn">
-        <input type="text" id="roomCode" placeholder="Mã phòng">
-        <button onclick="joinGame()" style="width: 100%; margin-top: 10px;">VÀO PHÒNG</button>
+<div id="login-screen" class="screen">
+    <div class="box">
+        <h2 style="color: var(--gold)">🐺 WolfMessenger V5</h2>
+        <input type="text" id="user-name" placeholder="Tên của bạn">
+        <button onclick="toRoomScreen()" style="width: 100%">TIẾP TỤC</button>
     </div>
 </div>
 
-<div class="mobile-overlay" id="overlay" onclick="toggleSidebar()"></div>
+<div id="room-screen" class="screen hidden">
+    <div class="box">
+        <h3 id="hi-user"></h3>
+        <button onclick="createRoom()" style="width: 100%; margin-bottom: 10px; background: #059669">TẠO PHÒNG MỚI</button>
+        <input type="text" id="room-input" placeholder="Mã phòng">
+        <button onclick="joinRoom()" style="width: 100%">THAM GIA</button>
+    </div>
+</div>
 
 <div id="game-ui" class="app-container hidden">
-    <div class="sidebar" id="sidebar">
-        <div style="padding: 20px; font-weight: bold; font-size: 18px; border-bottom: 1px solid #334155;">Đoạn chat</div>
-        <div class="chat-item" onclick="changeChat('village', null)">
-            <div class="avatar" style="background: var(--primary);"></div>
-            <div><b>Làng Ma Sói</b></div>
-        </div>
-        <div id="side-wolf" class="chat-item hidden" onclick="changeChat('wolf', null)">
-            <div class="avatar" style="background: var(--wolf);"></div>
-            <div><b>Hội Đồng Sói</b></div>
-        </div>
-        <div id="side-skill" class="chat-item hidden" onclick="changeChat('skill', null)">
-            <div class="avatar" style="background: var(--gold);"></div>
-            <div><b>Kênh Chức Năng</b></div>
-        </div>
-        
-        <div style="padding: 10px; font-size: 11px; color: #94a3b8; background: #0f172a;">NGƯỜI CHƠI (NHẮN RIÊNG/VOTE)</div>
-        <div id="player-list-area" style="flex-grow: 1; overflow-y: auto;"></div>
-
-        <div id="admin-panel" class="hidden" style="padding: 15px; background: #1e1b4b; border-top: 1px solid var(--gold);">
-            <div style="background: white; padding: 5px; border-radius: 5px; margin-bottom: 10px; text-align:center;">
-                <img id="qr-code" style="width: 120px;">
+    <div class="sidebar">
+        <div style="padding: 15px; background: #0b1120; font-weight: bold;">ROOM: <span id="room-id-label"></span></div>
+        <div id="player-list" style="flex: 1; overflow-y: auto;"></div>
+        <div id="host-panel" class="hidden" style="padding: 15px; background: #1e1b4b; border-top: 2px solid var(--gold);">
+            <div id="qr-box" style="background:white; padding:5px; border-radius:8px; margin-bottom:10px; text-align:center">
+                <img id="qr-img" style="width: 110px">
             </div>
-            <button onclick="startGame()" style="width: 100%; margin-bottom: 5px; background: #059669;">CHIA VAI & BẮT ĐẦU</button>
-            <button onclick="activateAI()" id="ai-toggle" style="width: 100%; background: var(--gold); color: black;">KÍCH HOẠT AI</button>
+            <button onclick="startGame()" style="width: 100%; background: #059669; margin-bottom: 5px;">BẮT ĐẦU GAME</button>
+            <button onclick="resolveAndNext()" style="width: 100%; background: var(--gold); color: black;">TIẾP THEO ⏩</button>
         </div>
     </div>
-
     <div class="main-chat">
-        <div class="chat-header">
-            <button class="btn-menu hidden" onclick="toggleSidebar()" style="background:transparent; padding: 5px;">☰</button>
-            <div style="flex-grow: 1; margin-left: 10px;">
-                <b id="chat-title" style="font-size: 15px;">Làng Ma Sói</b><br>
-                <small id="user-info" style="font-size: 11px; opacity: 0.8;">Đang kết nối...</small>
+        <div class="chat-header" style="padding: 12px 20px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between;">
+            <div>
+                <b id="role-text" style="color: var(--gold)">VAI TRÒ: ???</b><br>
+                <small id="phase-label" style="text-transform: uppercase;">LOBBY</small>
             </div>
-            <div id="phase-badge" style="background: var(--gold); color: black; padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 11px;">☀️ BAN NGÀY</div>
         </div>
-        
+        <div id="skill-hint" style="padding: 10px; background: #1e1b4b; color: var(--gold); text-align: center; font-weight: bold;" class="hidden"></div>
         <div class="messages" id="msg-list"></div>
-
         <div class="input-area">
-            <input type="text" id="chat-input" placeholder="Gõ /chucnang hoặc tin nhắn...">
+            <input type="text" id="chat-input" placeholder="Nhập tin nhắn...">
             <button onclick="sendMsg()">Gửi</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- CẤU HÌNH FIREBASE ---
-    const firebaseConfig = {
-        apiKey: "AIzaSyDErjt9kYyMdyiuFQAi3IhFl0tP4pbT_5A",
-        authDomain: "wolfmessenger-v1.firebaseapp.com",
-        projectId: "wolfmessenger-v1",
-        storageBucket: "wolfmessenger-v1.firebasestorage.app",
-        messagingSenderId: "553096273155",
-        appId: "1:553096273155:web:e0fbc409f5587486471d36",
-        databaseURL: "https://wolfmessenger-v1-default-rtdb.firebaseio.com"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+// --- CONSTANTS ---
+const ROLE = { WEREWOLF: 'WEREWOLF', SEER: 'SEER', GUARDIAN: 'GUARDIAN', VILLAGER: 'VILLAGER' };
+const PHASE = { LOBBY: 'LOBBY', SEER: 'SEER_PHASE', GUARD: 'GUARD_PHASE', WOLF: 'WOLF_PHASE', VOTE: 'VOTE_PHASE', MORNING: 'MORNING' };
 
-    let myUser = { id: 0, name: "", role: "Dân Làng", room: "" };
-    let currentMode = "village"; let targetUser = null; let isNight = false;
+// --- FIREBASE ---
+const firebaseConfig = { apiKey: "AIzaSyDErjt9kYyMdyiuFQAi3IhFl0tP4pbT_5A", databaseURL: "https://wolfmessenger-v1-default-rtdb.firebaseio.com", projectId: "wolfmessenger-v1" };
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-    // --- RESPONSIVE LOGIC ---
-    function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('active');
-        document.getElementById('overlay').classList.toggle('active');
+// --- STATE ---
+let myUser = { uid: "u_" + Math.random().toString(16).slice(2), name: "", room: "", role: ROLE.VILLAGER, isHost: false, isDead: false };
+let players = {};
+let currentPhase = PHASE.LOBBY;
+
+// --- RECOVERY & QR AUTO-JOIN ---
+window.onload = () => {
+    const params = new URLSearchParams(window.location.search);
+    if(params.has("room")) document.getElementById("room-input").value = params.get("room");
+    
+    const saved = localStorage.getItem('wolf_v5_session');
+    if (saved) {
+        const data = JSON.parse(saved);
+        if (confirm(`Quay lại phòng ${data.room}?`)) { myUser = data; enterRoom(data.room); }
     }
+};
 
-    // Tự điền mã phòng từ QR
-    window.onload = () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        if(urlParams.has('room')) document.getElementById('roomCode').value = urlParams.get('room');
-    };
+function toRoomScreen() {
+    myUser.name = document.getElementById('user-name').value.trim();
+    if (!myUser.name) return alert("Nhập tên!");
+    document.getElementById('hi-user').innerText = `Chào ${myUser.name}!`;
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('room-screen').classList.remove('hidden');
+}
 
-    function joinGame() {
-        const name = document.getElementById('userName').value.trim();
-        const code = document.getElementById('roomCode').value.trim().toUpperCase();
-        if(!name || !code) return alert("Vui lòng nhập đủ thông tin!");
-        
-        myUser.name = name; myUser.room = code;
-        const roomRef = db.ref(`rooms/${code}/players`);
-        roomRef.once('value', (snapshot) => {
-            myUser.id = snapshot.numChildren() + 1;
-            if(myUser.id === 1) myUser.isAdmin = true;
-            roomRef.child(myUser.id).set(myUser);
-            roomRef.child(myUser.id).onDisconnect().remove();
-            setupGameUI();
-        });
+function createRoom() { myUser.isHost = true; enterRoom(Math.random().toString(36).substring(2, 8).toUpperCase()); }
+function joinRoom() { const code = document.getElementById('room-input').value.toUpperCase(); if(code) enterRoom(code); }
+
+function enterRoom(code) {
+    myUser.room = code;
+    localStorage.setItem('wolf_v5_session', JSON.stringify(myUser));
+    const roomRef = db.ref(`rooms/${code}`);
+    
+    roomRef.child('players').once('value', s => {
+        if(!s.exists()) myUser.isHost = true;
+        roomRef.child(`players/${myUser.uid}`).update({ uid: myUser.uid, name: myUser.name, isOnline: true, isHost: myUser.isHost });
+    });
+    roomRef.child(`players/${myUser.uid}/isOnline`).onDisconnect().set(false);
+    setupGameUI();
+}
+
+function setupGameUI() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+    document.getElementById('game-ui').classList.remove('hidden');
+    document.getElementById('room-id-label').innerText = myUser.room;
+    
+    const path = `rooms/${myUser.room}`;
+    db.ref(`${path}/gameState/phase`).on('value', s => { currentPhase = s.val() || PHASE.LOBBY; syncUI(); });
+    db.ref(`${path}/players`).on('value', s => { players = s.val() || {}; renderPlayers(); if(myUser.isHost) checkWin(); });
+    db.ref(`${path}/players/${myUser.uid}/role`).on('value', s => { 
+        myUser.role = s.val() || ROLE.VILLAGER; 
+        document.getElementById('role-text').innerText = "VAI TRÒ: " + myUser.role;
+    });
+    db.ref(`${path}/players/${myUser.uid}/isDead`).on('value', s => myUser.isDead = !!s.val());
+    db.ref(`${path}/messages`).limitToLast(30).on('child_added', s => renderMsg(s.val()));
+
+    if(myUser.isHost) {
+        document.getElementById('host-panel').classList.remove('hidden');
+        const qrUrl = window.location.origin + window.location.pathname + "?room=" + myUser.room;
+        document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrUrl)}`;
     }
+}
 
-    function setupGameUI() {
-        document.getElementById('lobby').classList.add('hidden');
-        document.getElementById('game-ui').classList.remove('hidden');
-        if(myUser.isAdmin) {
-            document.getElementById('admin-panel').classList.remove('hidden');
-            const url = window.location.origin + window.location.pathname + "?room=" + myUser.room;
-            document.getElementById('qr-code').src = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(url)}`;
-        }
-        
-        // Listeners
-        db.ref(`rooms/${myUser.room}/players/${myUser.id}/role`).on('value', (s) => {
-            myUser.role = s.val() || "Dân Làng";
-            document.getElementById('user-info').innerText = `ID: ${myUser.id} | Vai: ${myUser.role}`;
-            if(myUser.role.includes("Sói")) document.getElementById('side-wolf').classList.remove('hidden');
-            if(myUser.role !== "Dân Làng" && !myUser.role.includes("Sói")) document.getElementById('side-skill').classList.remove('hidden');
-        });
+function syncUI() {
+    document.getElementById('phase-label').innerText = currentPhase.replace("_", " ");
+    const hint = document.getElementById('skill-hint');
+    hint.classList.add('hidden');
 
-        db.ref(`rooms/${myUser.room}/isNight`).on('value', (s) => {
-            isNight = s.val() || false;
-            document.getElementById('phase-badge').innerText = isNight ? "🌙 BAN ĐÊM" : "☀️ BAN NGÀY";
-            document.getElementById('phase-badge').style.background = isNight ? "#4a148c" : "#facc15";
-            document.getElementById('phase-badge').style.color = isNight ? "white" : "black";
-        });
+    if(myUser.isDead) return;
+    
+    const isMyTurn = (currentPhase === PHASE.SEER && myUser.role === ROLE.SEER) || 
+                     (currentPhase === PHASE.WOLF && myUser.role === ROLE.WEREWOLF) ||
+                     (currentPhase === PHASE.GUARD && myUser.role === ROLE.GUARDIAN) ||
+                     (currentPhase === PHASE.VOTE);
 
-        db.ref(`rooms/${myUser.room}/messages`).on('child_added', (s) => renderMessage(s.val()));
-        db.ref(`rooms/${myUser.room}/players`).on('value', (s) => updatePlayerList(s.val()));
-        db.ref(`rooms/${myUser.room}/votes`).on('value', (s) => updateVoteUI(s.val()));
-        db.ref(`rooms/${myUser.room}`).on('value', (s) => { if(!s.exists()) location.reload(); });
+    if(isMyTurn) {
+        hint.classList.remove('hidden');
+        hint.innerText = "ĐẾN LƯỢT BẠN: CHỌN MỤC TIÊU TRONG DANH SÁCH!";
     }
+}
 
-    function updatePlayerList(players) {
-        const area = document.getElementById('player-list-area'); area.innerHTML = "";
-        if(!players) return;
-        Object.values(players).forEach(p => {
-            if(p.id === myUser.id) return;
-            const div = document.createElement('div'); div.className = 'chat-item';
-            div.innerHTML = `<div class="avatar"></div><div style="flex-grow:1" onclick="changeChat('private', ${JSON.stringify(p).replace(/"/g, '&quot;')})"><b>${p.name}</b><br><small>Nhấn để Chat/Vote</small></div>
-                             <button style="padding:4px 8px; font-size:10px;" onclick="castVote(${p.id})">VOTE</button><span class="vote-count" id="vc-${p.id}">0</span>`;
-            area.appendChild(div);
-        });
-    }
-
-    function sendMsg() {
-        const text = document.getElementById('chat-input').value.trim();
-        if(!text) return;
-        
-        // Mật lệnh ẩn
-        if(text.toLowerCase() === '/xoafirebase') {
-            document.getElementById('chat-input').value = "";
-            if(confirm("Xác nhận xóa dữ liệu phòng?")) db.ref(`rooms/${myUser.room}`).remove();
-            return;
-        }
-
-        // Lệnh tra cứu
-        if(text.toLowerCase() === '/chucnang') {
-            document.getElementById('chat-input').value = "";
-            renderMessage({ sender: "HỆ THỐNG", text: `Vai của bạn: ${myUser.role}`, mode: "system" });
-            return;
-        }
-
-        db.ref(`rooms/${myUser.room}/messages`).push({
-            sender: myUser.name, senderId: myUser.id, text: text, mode: currentMode,
-            receiverId: targetUser ? targetUser.id : null
-        });
-        document.getElementById('chat-input').value = "";
-    }
-
-    function renderMessage(m) {
-        if(m.mode === 'private') {
-            const isRel = (m.senderId === myUser.id && m.receiverId === targetUser?.id) || (m.senderId === targetUser?.id && m.receiverId === myUser.id);
-            if(!isRel) return;
-        }
-        if(m.mode !== 'system' && m.mode !== currentMode) return;
-        
-        const list = document.getElementById('msg-list');
+function renderPlayers() {
+    const list = document.getElementById('player-list'); list.innerHTML = "";
+    Object.values(players).forEach(p => {
         const div = document.createElement('div');
-        div.className = `msg ${m.mode === 'system' ? 'system' : (m.senderId === myUser.id ? 'sent' : 'received')}`;
-        div.innerHTML = `<b>${m.sender}:</b> ${m.text}`;
+        div.className = `player-card ${p.isDead ? 'dead' : ''}`;
+        div.onclick = () => useSkill(p.uid);
+        div.innerHTML = `<div style="width:10px;height:10px;border-radius:50%;background:${p.isOnline?'#22c55e':'#64748b'}"></div>
+                         <b>${p.name}</b> ${p.uid === myUser.uid ? '(Bạn)' : ''}`;
         list.appendChild(div);
-        list.scrollTop = list.scrollHeight;
-        
-        // Tự đóng sidebar trên mobile khi chọn chat
-        if(window.innerWidth < 768) {
-            document.getElementById('sidebar').classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-        }
+    });
+}
+
+function useSkill(targetUid) {
+    if(myUser.isDead || currentPhase === PHASE.LOBBY) return;
+    if(targetUid === myUser.uid && currentPhase !== PHASE.GUARD) return alert("Không thể tự chọn mình!");
+
+    const path = `rooms/${myUser.room}/actions/${currentPhase}/${myUser.uid}`;
+    
+    if(currentPhase === PHASE.SEER && myUser.role === ROLE.SEER) {
+        db.ref(`rooms/${myUser.room}/secretRoles/${targetUid}`).once('value', s => {
+            const res = (s.val() === ROLE.WEREWOLF) ? "SÓI 🐺" : "DÂN 😇";
+            systemMsg(`Kết quả soi ${players[targetUid].name}: ${res}`);
+        });
+    } else if([PHASE.WOLF, PHASE.GUARD, PHASE.VOTE].includes(currentPhase)) {
+        db.ref(path).set(targetUid);
+        systemMsg(`Đã chọn: ${players[targetUid].name}`);
+    }
+}
+
+function resolveAndNext() {
+    if(!myUser.isHost) return;
+    const path = `rooms/${myUser.room}`;
+    
+    if(currentPhase === PHASE.WOLF) {
+        db.ref(`${path}/actions`).once('value', s => {
+            const acts = s.val() || {};
+            const wolfVotes = acts[PHASE.WOLF] || {};
+            const guardProt = Object.values(acts[PHASE.GUARD] || {})[0];
+            
+            let counts = {};
+            Object.values(wolfVotes).forEach(v => counts[v] = (counts[v] || 0) + 1);
+            let target = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b, null);
+            
+            if(target && target !== guardProt) {
+                db.ref(`${path}/players/${target}/isDead`).set(true);
+                broadcastAI(`Đêm qua, ${players[target].name} đã bị Sói cắn chết.`);
+            } else broadcastAI("Một đêm bình yên, không ai chết.");
+            db.ref(`${path}/actions`).remove();
+        });
     }
 
-    // Các hàm phụ trợ
-    function changeChat(mode, user) { currentMode = mode; targetUser = user; document.getElementById('chat-title').innerText = user ? "Chat riêng: " + user.name : "Kênh " + mode; document.getElementById('msg-list').innerHTML = ""; }
-    function castVote(tid) { if(isNight) return alert("Đêm không thể treo cổ!"); db.ref(`rooms/${myUser.room}/votes/${myUser.id}`).set(tid); }
-    function updateVoteUI(v) { const c = {}; if(v) Object.values(v).forEach(id => c[id] = (c[id] || 0) + 1); document.querySelectorAll('.vote-count').forEach(el => el.innerText = c[el.id.split('-')[1]] || 0); }
-    function startGame() { db.ref(`rooms/${myUser.room}/players`).once('value', (s) => { const keys = Object.keys(s.val()); let shuf = Array(50).fill().map((_,i)=>i).sort(()=>Math.random()-0.5); keys.forEach((k,i)=>db.ref(`rooms/${myUser.room}/players/${k}/role`).set("Dân Làng")); alert("Đã chia vai!"); }); }
-    function toggleTime() { db.ref(`rooms/${myUser.room}/isNight`).set(!isNight); }
+    if(currentPhase === PHASE.VOTE) {
+        db.ref(`${path}/actions/${PHASE.VOTE}`).once('value', s => {
+            const votes = s.val() || {};
+            let counts = {};
+            Object.values(votes).forEach(v => counts[v] = (counts[v] || 0) + 1);
+            let target = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b, null);
+            if(target) {
+                db.ref(`${path}/players/${target}/isDead`).set(true);
+                broadcastAI(`Dân làng đã treo cổ ${players[target].name}.`);
+            }
+            db.ref(`${path}/actions/${PHASE.VOTE}`).remove();
+        });
+    }
+    
+    const flow = [PHASE.SEER, PHASE.GUARD, PHASE.WOLF, PHASE.MORNING, PHASE.VOTE];
+    let next = flow[(flow.indexOf(currentPhase) + 1) % flow.length] || PHASE.SEER;
+    db.ref(`${path}/gameState/phase`).set(next);
+}
+
+function startGame() {
+    const ps = Object.values(players); if(ps.length < 4) return alert("Cần ít nhất 4 người!");
+    let roles = [ROLE.WEREWOLF, ROLE.SEER, ROLE.GUARDIAN, ROLE.VILLAGER, ROLE.VILLAGER, ROLE.VILLAGER];
+    roles = roles.slice(0, ps.length).sort(() => Math.random() - 0.5);
+    
+    ps.forEach((p, i) => {
+        db.ref(`rooms/${myUser.room}/players/${p.uid}/role`).set(roles[i]);
+        db.ref(`rooms/${myUser.room}/secretRoles/${p.uid}`).set(roles[i]);
+    });
+    db.ref(`rooms/${myUser.room}/gameState/phase`).set(PHASE.SEER);
+    broadcastAI("TRÒ CHƠI BẮT ĐẦU! Tiên tri hãy hành động.");
+}
+
+function sendMsg() {
+    const input = document.getElementById('chat-input');
+    const text = input.value.trim(); if(!text) return;
+    if(text === "/xoafirebase") { db.ref(`rooms/${myUser.room}`).remove(); return; }
+    
+    const isNight = [PHASE.SEER, PHASE.GUARD, PHASE.WOLF].includes(currentPhase);
+    if(myUser.isDead) return alert("Bạn đã chết!");
+    if(isNight && myUser.role !== ROLE.WEREWOLF && !myUser.isHost) return alert("Đêm hãy im lặng!");
+
+    db.ref(`rooms/${myUser.room}/messages`).push({ sender: myUser.name, text: text, uid: myUser.uid, role: myUser.role, phase: currentPhase });
+    input.value = "";
+}
+
+function renderMsg(m) {
+    const isNight = [PHASE.SEER, PHASE.GUARD, PHASE.WOLF].includes(m.phase);
+    if(isNight && m.role === ROLE.WEREWOLF && myUser.role !== ROLE.WEREWOLF && !myUser.isHost) return;
+    
+    const list = document.getElementById('msg-list');
+    const div = document.createElement('div');
+    div.className = `msg ${m.uid === 'ai' ? 'system' : (m.uid === myUser.uid ? 'sent' : 'received')}`;
+    div.textContent = `${m.sender}: ${m.text}`;
+    list.appendChild(div); list.scrollTop = list.scrollHeight;
+}
+
+function checkWin() {
+    const alive = Object.values(players).filter(p => !p.isDead);
+    const wolves = alive.filter(p => p.role === ROLE.WEREWOLF).length;
+    const humans = alive.length - wolves;
+    if(wolves === 0 && currentPhase !== PHASE.LOBBY) broadcastAI("DÂN LÀNG THẮNG!");
+    if(wolves >= humans && currentPhase !== PHASE.LOBBY) broadcastAI("PHE SÓI THẮNG!");
+}
+
+function broadcastAI(t) { db.ref(`rooms/${myUser.room}/messages`).push({ sender: "🤖 AI", text: t, uid: "ai" }); }
+function systemMsg(t) { renderMsg({ sender: "HỆ THỐNG", text: t, uid: "sys" }); }
 </script>
 </body>
 </html>
