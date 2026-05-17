@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WolfMessenger Ultimate - Responsive Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.1/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<div id="overlay" class="overlay hidden"></div>
+
+<div id="screen-lobby" class="screen">
+    <div class="box game-card-theme">
+        <h2 class="animated-title">🐺 WolfMessenger</h2>
+        <p class="subtitle">Hệ Thống Phân Tách Kênh Chat & Biểu Quyết Tự Động</p>
+        <input type="text" id="userName" placeholder="Nhập tên của bạn..." class="neon-input">
+        <button id="btnConfirmName" class="core-btn btn-primary-gradient">XÁC NHẬN DANH TÍNH</button>
+    </div>
+</div>
+
+<div id="screen-browser" class="screen hidden">
+    <div class="box game-card-theme wide-box">
+        <div class="browser-header">
+            <h3>Chào, <span id="hello-user" style="color: var(--gold)">...</span></h3>
+            <button id="btnChangeName" class="small-action-btn">Đổi tên</button>
+        </div>
+        
+        <div class="create-room-zone">
+            <input type="text" id="newRoomCode" placeholder="Mã phòng muốn tạo (VD: HOA8)..." class="neon-input">
+            <button id="btnCreateRoom" class="core-btn btn-success-gradient">TẠO</button>
+        </div>
+
+        <div class="rooms-list-container">
+            <div class="list-label" style="padding-left:0; color: var(--gold)">Danh Sách Phòng Đang Hoạt Động</div>
+            <div id="active-rooms-list" class="rooms-scroll-list">
+                <div class="no-room-text">Đang quét danh sách phòng trên Firebase...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="screen-game" class="app-container hidden">
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-title">CÁC KÊNH CHAT RIÊNG BIỆT</div>
+        <div id="item-village" class="chat-item active">🏠 Làng Ma Sói</div>
+        <div id="item-wolf" class="chat-item hidden">🐺 Hội Đồng Sói</div>
+        <div id="item-ai" class="chat-item">🤖 Quản Trò AI</div>
+        <div id="item-private" class="chat-item hidden">✉️ Bí Mật: <span id="private-target-name">...</span></div>
+        
+        <div class="list-label">DANH SÁCH THÀNH VIÊN (TICK HÀNH ĐỘNG)</div>
+        <div id="list-players" class="player-list">
+            </div>
+
+        <div class="system-vote-zone">
+            <button id="btnVoteReset" class="core-btn btn-warning-gradient">🔄 YÊU CẦU RESET TRẬN (<span id="reset-vote-count">0/0</span>)</button>
+        </div>
+    </aside>
+
+    <main class="main-chat">
+        <header class="header">
+            <button id="menu-toggle-btn" class="toggle-btn">☰</button>
+            <div style="flex-grow: 1; min-width: 0;">
+                <b id="chat-title" style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Làng Ma Sói</b>
+                <small id="user-info" style="color: var(--gold); font-size: 11px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
+            </div>
+            <div id="phase-badge" class="badge">☀️ NGÀY</div>
+        </header>
+        
+        <div id="msg-list" class="messages"></div>
+        
+        <footer class="input-box">
+            <input type="text" id="chat-input" placeholder="Nhập tin nhắn hoặc lệnh hệ thống...">
+            <button id="btnSend">Gửi</button>
+        </footer>
+    </main>
+</div>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

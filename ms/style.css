@@ -1,0 +1,136 @@
+:root { 
+  --bg: #0f172a; 
+  --card: #1e293b; 
+  --primary: #2563eb; 
+  --primary-glow: rgba(37, 99, 235, 0.4);
+  --wolf: #ef4444; 
+  --gold: #facc15; 
+  --text: #f8fafc; 
+  --border-neon: rgba(255, 255, 255, 0.06);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body { 
+  margin: 0; font-family: -apple-system, system-ui, sans-serif; 
+  background: var(--bg); color: var(--text); 
+  height: 100vh; overflow: hidden; 
+}
+
+.hidden { display: none !important; }
+
+/* LOBBY VÀ TRÌNH DUYỆT PHÒNG KHÔNG GIAN TỰ CO GIÃN */
+.screen { position: fixed; inset: 0; background: radial-gradient(circle at center, #111827 0%, #050510 100%); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
+.game-card-theme {
+  background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-neon); border-top: 4px solid var(--primary);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+.box { padding: 30px 20px; border-radius: 20px; width: 100%; max-width: 380px; text-align: center; }
+.wide-box { max-width: 520px; text-align: left; }
+
+.animated-title { font-size: 24px; font-weight: 800; margin: 0; color: var(--gold); }
+.subtitle { font-size: 11px; color: #64748b; margin: 6px 0 20px 0; font-weight: 600; letter-spacing: 0.5px; line-height: 1.4; }
+
+.browser-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid var(--border-neon); }
+.browser-header h3 { margin: 0; font-size: 16px; }
+.small-action-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border-neon); color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; }
+
+/* VÙNG TẠO PHÒNG: TỰ ĐỘNG BẺ DÒNG TRÊN ĐIỆN THOẠI */
+.create-room-zone { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.create-room-zone .neon-input { margin: 0; flex: 1 1 200px; text-align: left; padding-left: 15px; }
+.create-room-zone .core-btn { flex: 1 1 auto; white-space: nowrap; padding: 13px 20px; border-radius: 12px; }
+
+.neon-input { 
+  width: 100%; padding: 13px; margin: 10px 0; border-radius: 12px; 
+  border: 1px solid #334155; background: #0f172a; color: white; text-align: center; outline: none;
+  font-family: inherit; transition: 0.2s; font-size: 14px;
+}
+.neon-input:focus { border-color: var(--primary); box-shadow: 0 0 12px var(--primary-glow); }
+
+.rooms-list-container { display: flex; flex-direction: column; width: 100%; }
+.rooms-scroll-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.no-room-text { text-align: center; color: #475569; font-size: 13px; padding: 20px; font-style: italic; }
+
+.room-row-item {
+  display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;
+  background: #0f172a; border: 1px solid var(--border-neon); border-radius: 12px; gap: 10px;
+}
+.room-info-meta b { font-size: 14px; color: white; }
+.room-info-meta div { font-size: 11px; color: #64748b; }
+.btn-join-fast { background: var(--primary); color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+/* NÚT VIÊN THUỐC */
+.core-btn { padding: 13px; color: white; border: none; border-radius: 20px; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 13px; letter-spacing: 0.5px; text-align: center; }
+.btn-primary-gradient { background: linear-gradient(135deg, var(--primary) 0%, #1d4ed8 100%); }
+.btn-success-gradient { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
+.btn-warning-gradient { background: linear-gradient(135deg, #d97706 0%, #b45309 100%); }
+
+/* CHAT APP WORKSPACE LAYOUT */
+.app-container { display: flex; height: 100vh; width: 100vw; position: relative; overflow: hidden; }
+
+/* SIDEBAR MẶC ĐỊNH TRÊN MÁY TÍNH (PC) */
+.sidebar { width: 300px; min-width: 300px; background: #111827; border-right: 1px solid #334155; display: flex; flex-direction: column; z-index: 100; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.sidebar-title { padding: 20px 20px 15px 20px; font-weight: bold; border-bottom: 1px solid #1e293b; font-size: 12px; letter-spacing: 0.5px; color: #64748b; }
+
+.chat-item { padding: 14px 20px; display: flex; align-items: center; gap: 12px; cursor: pointer; border-bottom: 1px solid #1e293b; font-size: 14px; opacity: 0.5; }
+.chat-item.active { background: #1e293b; border-left: 4px solid var(--primary); opacity: 1; color: white; font-weight: 600; }
+.list-label { padding: 18px 20px 6px 20px; font-size: 11px; color: #475569; font-weight: bold; letter-spacing: 0.5px; }
+
+/* DANH SÁCH NGƯỜI CHƠI & NÚT TICK */
+.player-list { flex-grow: 1; overflow-y: auto; padding: 5px 0; }
+.player-item-row { padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #0f172a; gap: 8px; }
+.player-item-left { display: flex; align-items: center; gap: 10px; cursor: pointer; min-width: 0; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: #334155; display: flex; align-items: center; justify-content: center; font-size: 12px; position: relative; font-weight: bold; flex-shrink: 0; }
+.status { width: 8px; height: 8px; border-radius: 50%; position: absolute; bottom: 0; right: 0; border: 1.5px solid #111827; }
+.online { background: #22c55e; } .offline { background: #64748b; }
+.is-dead { opacity: 0.35; filter: grayscale(1); }
+
+.action-tick-btn {
+  background: rgba(255,255,255,0.03); border: 1px solid #334155; color: #94a3b8;
+  padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+.system-vote-zone { padding: 15px; background: #161324; border-top: 1px solid rgba(255,255,255,0.04); }
+.system-vote-zone .core-btn { border-radius: 12px; font-size: 12px; padding: 11px; }
+
+/* VÙNG BOX CHAT PHẢI */
+.main-chat { flex-grow: 1; display: flex; flex-direction: column; background: var(--bg); min-width: 0; }
+.header { padding: 15px 20px; background: #1e293b; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #334155; }
+.toggle-btn { background: none; border: none; color: white; font-size: 20px; cursor: pointer; display: none; padding: 0 5px; }
+.badge { padding: 5px 12px; border-radius: 20px; font-weight: bold; font-size: 10px; background: var(--gold); color: black; flex-shrink: 0; }
+
+.messages { flex-grow: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: 80%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
+.msg.sent { background: var(--primary); align-self: flex-end; border-bottom-right-radius: 2px; color: white; }
+.msg.received { background: #1e293b; align-self: flex-start; border-bottom-left-radius: 2px; }
+.msg.ai { background: rgba(250, 204, 21, 0.05); border: 1px solid rgba(250, 204, 21, 0.15); color: var(--gold); align-self: center; text-align: center; font-size: 13px; max-width: 90%; border-radius: 10px; }
+
+.input-box { padding: 12px; background: #1e293b; display: flex; gap: 10px; border-top: 1px solid #334155; }
+.input-box input { flex-grow: 1; padding: 12px 15px; border-radius: 25px; border: 1px solid #475569; background: #0f172a; color: white; outline: none; font-size: 14px; min-width: 0; }
+.input-box button { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 25px; font-weight: bold; cursor: pointer; flex-shrink: 0; }
+
+/* LAYER PHỦ ĐIỆN THOẠI */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 90; backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+
+/* ========================================== */
+/* CẤU HÌNH ĐỘC QUYỀN CHO ĐIỆN THOẠI (MOBILE) */
+/* ========================================== --> */
+@media (max-width: 768px) {
+    .toggle-btn { display: block; } /* Hiện nút ba gạch ☰ */
+    
+    /* Biến Sidebar thành dạng trượt giấu ngầm */
+    .sidebar { 
+        position: absolute; left: 0; top: 0; bottom: 0; 
+        transform: translateX(-100%); /* Giấu sang trái */
+        box-shadow: none;
+    }
+    /* Khi Menu được kích hoạt từ nút bấm */
+    .sidebar.active { 
+        transform: translateX(0); 
+        box-shadow: 10px 0 40px rgba(0,0,0,0.8); 
+    }
+    
+    .msg { max-width: 85%; font-size: 13px; }
+    .input-box { padding: 10px; gap: 6px; }
+    .input-box button { padding: 0 15px; font-size: 13px; }
+}
